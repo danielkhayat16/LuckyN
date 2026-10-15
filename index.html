@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>המזווה שלי</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{--bg:#f7f5ef;--card:#fff;--ink:#1f2925;--muted:#6c766f;--accent:#3f7b68;--accent2:#dce9e3;--line:#e4e5df;--warn:#bf7a24;--bad:#a34848}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;z-index:5;background:#ffffffee;backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.wrap{max-width:980px;margin:auto;padding:14px}.brand{display:flex;align-items:center;gap:10px}.logo{font-size:30px}.brand h1{font-size:1.35rem;margin:0}.sub{font-size:.83rem;color:var(--muted)}
+nav{display:flex;gap:7px;overflow:auto;padding-top:11px}nav button{white-space:nowrap;background:#eef3f0;color:var(--ink)}nav button.active{background:var(--accent);color:#fff}
+main{max-width:980px;margin:auto;padding:14px}.panel{display:none}.panel.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:11px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0;box-shadow:0 3px 14px #00000008}
+h2,h3{margin:0 0 10px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}.stack{display:grid;gap:8px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:11px;border:1px solid #cfd8d2;border-radius:11px;background:#fff}button{border:0;border-radius:11px;padding:11px 13px;background:var(--accent);color:#fff;font-weight:700}.alt{background:#edf3f0;color:var(--ink)}.red{background:var(--bad)}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#edf3f0;font-size:.77rem}.soon{background:#fff1df;color:#925513}.urgent{background:#ffe4e4;color:#8f2f2f}.fresh{background:#e4f6eb;color:#27633f}.muted{color:var(--muted)}.small{font-size:.82rem}.note{background:#edf5f1;border-radius:12px;padding:10px}.empty{padding:18px;text-align:center;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.91rem}th,td{text-align:right;padding:9px;border-bottom:1px solid #edf0ed;vertical-align:middle}.recipe{border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0}.recipe .meta{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.big{font-size:1.1rem;font-weight:800}
+@media(max-width:650px){.wrap,main{padding:11px}.hide-mobile{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="brand"><div class="logo">🧺</div><div><h1>המזווה שלי</h1><div class="sub">ניהול קניות, מלאי ומתכונים למשפחה</div></div></div><nav id="nav"></nav></div></header>
+<main>
+<section id="home" class="panel active">
+<div class="grid">
+<div class="card"><h3>מה יש בבית?</h3><div id="summary"></div></div>
+<div class="card"><h3>צריך להשתמש בקרוב</h3><div id="expiring"></div></div>
+</div>
+<div class="card"><h3>אפשר להכין עכשיו</h3><div id="homeRecipes"></div></div>
+<div class="card"><h3>הוספת קניות</h3><div class="row"><button onclick="go('receipt')">📷 סריקת קבלה</button><button class="alt" onclick="go('stock')">✍️ הוספה ידנית</button></div><p class="small muted">סריקת ברקוד אינה חובה. הקבלה היא הדרך הראשית להכניס קניות.</p></div>
+</section>
+<section id="stock" class="panel">
+<div class="card"><h3>הוספת מוצר</h3><div class="stack"><div class="row"><input id="name" placeholder="שם המוצר"><select id="zone"><option value="fridge">מקרר</option><option value="freezer">מקפיא</option><option value="pantry">מזווה</option></select></div><div class="row"><input id="qty" type="number" step="0.1" placeholder="כמות"><select id="unit"><option>יחידה</option><option>קופסה</option><option>חבילה</option><option>ק״ג</option><option>גרם</option><option>ליטר</option><option>מ״ל</option></select><input id="min" type="number" step="0.1" placeholder="מינימום רצוי"></div><div class="row"><input id="purchase" type="date"><input id="expiry" type="date"></div><button onclick="addItem()">הוספה למלאי</button></div></div>
+<div class="card"><h3>המלאי</h3><div style="overflow:auto"><table><thead><tr><th>מוצר</th><th>מיקום</th><th>כמות</th><th>תוקף</th><th></th></tr></thead><tbody id="stockBody"></tbody></table></div></div>
+</section>
+<section id="recipes" class="panel">
+<div class="card"><h3>מתכונים דינמיים</h3><div class="row"><select id="kosherFilter" onchange="renderRecipes()"><option value="all">הכל</option><option value="pareve">פרווה</option><option value="dairy">חלבי</option><option value="meat">בשרי</option></select><select id="recipeFilter" onchange="renderRecipes()"><option value="possible">אפשר להכין עכשיו</option><option value="one">חסר מוצר אחד</option><option value="all">כל המתכונים</option></select></div><div id="recipeList"></div></div>
+</section>
+<section id="receipt" class="panel">
+<div class="card"><h3>סריקת קבלה</h3><input id="receiptImage" type="file" accept="image/*" capture="environment"><button style="margin-top:8px" onclick="scanReceipt()">קריאת הקבלה</button><p id="ocrStatus" class="small muted"></p></div>
+<div class="card"><h3>טקסט מהקבלה</h3><textarea id="ocrText" rows="10" placeholder="הטקסט יופיע כאן"></textarea><button onclick="parseReceipt()">זיהוי מוצרים</button></div>
+<div class="card"><h3>מוצרים שזוהו</h3><div id="receiptResults"></div><p class="small muted">יש לאשר לפני הוספה למלאי. תאריך הקנייה נלקח מהיום כברירת מחדל; אפשר לשנות.</p></div>
+</section>
+<section id="shopping" class="panel"><div class="card"><h3>רשימת קניות</h3><div class="row"><input id="manualShop" placeholder="הוספה ידנית"><button onclick="addManualShop()">הוספה</button></div><ul id="shoppingList"></ul></div></section>
+<section id="settings" class="panel"><div class="card"><h3>מילון קבלות</h3><div class="row"><input id="mapKey" placeholder="מילה/קיצור בקבלה"><input id="mapVal" placeholder="שם המוצר"><select id="mapZone"><option value="fridge">מקרר</option><option value="freezer">מקפיא</option><option value="pantry">מזווה</option></select><button onclick="saveMap()">שמירה</button></div><div id="mapList" class="small" style="margin-top:10px"></div></div><div class="card"><h3>גיבוי</h3><button class="alt" onclick="exportData()">ייצוא נתונים</button></div></section>
+</main>
+<script>
+const KEY='hamizve_v2';
+const mapsDefault={"עגב":"עגבניות|fridge","מלפפון":"מלפפונים|fridge","אבוקדו":"אבוקדו|fridge","חלב":"חלב|fridge","ביצ":"ביצים|fridge","גבינ":"גבינה|fridge","טונה":"טונה|pantry","תירס":"תירס|pantry","לבבות דקל":"לבבות דקל|pantry","פסטה":"פסטה|pantry","אורז":"אורז|pantry","קוסקוס":"קוסקוס|pantry","קמח":"קמח|pantry","במבה":"במבה|pantry","תפוח":"תפוחים|fridge","תפו":"תפוחי אדמה|pantry","גזר":"גזר|fridge","בצל":"בצל|pantry","בטטה":"בטטה|pantry","כרוב":"כרוב|fridge","פלפל":"פלפלים|fridge","סלמון":"סלמון|freezer","בשר":"בשר|freezer","לחם":"לחם|freezer"};
+const recipes=[
+{name:'סלט טונה וירקות',k:'pareve',time:10,ing:[['טונה',1,'קופסה'],['מלפפונים',1,'יחידה'],['עגבניות',2,'יחידה']]},
+{name:'טוסט אבוקדו וביצה',k:'dairy',time:10,ing:[['לחם',2,'יחידה'],['אבוקדו',1,'יחידה'],['ביצים',1,'יחידה'],['גבינה',1,'חבילה']]},
+{name:'אורז עם סלמון',k:'pareve',time:25,ing:[['אורז',0.2,'ק״ג'],['סלמון',0.3,'ק״ג'],['מלפפונים',1,'יחידה']]},
+{name:'פסטה ברוטב עגבניות',k:'pareve',time:25,ing:[['פסטה',1,'חבילה'],['עגבניות',4,'יחידה'],['בצל',1,'יחידה']]},
+{name:'חביתה וסלט',k:'dairy',time:15,ing:[['ביצים',2,'יחידה'],['מלפפונים',1,'יחידה'],['עגבניות',1,'יחידה'],['גבינה',1,'חבילה']]},
+{name:'קוסקוס לשבת',k:'meat',time:120,ing:[['קוסקוס',0.5,'ק״ג'],['בשר',0.8,'ק״ג'],['גזר',3,'יחידה'],['תפוחי אדמה',3,'יחידה'],['בטטה',1,'יחידה'],['כרוב',1,'יחידה']]},
+{name:'סלמון בתנור',k:'pareve',time:25,ing:[['סלמון',0.5,'ק״ג']]},
+{name:'סלט תירס וטונה',k:'pareve',time:8,ing:[['תירס',1,'קופסה'],['טונה',1,'קופסה'],['מלפפונים',1,'יחידה']]}
+];
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{items:[],shopping:[],maps:{...mapsDefault}};
+const tabs=[['home','בית'],['stock','מלאי'],['recipes','מתכונים'],['receipt','קבלה'],['shopping','קניות'],['settings','הגדרות']];
+tabs.forEach((t,i)=>{let b=document.createElement('button');b.textContent=t[1];b.className=i?'':'active';b.onclick=()=>go(t[0]);nav.appendChild(b)});
+function go(id){document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('active',tabs[i][0]===id));render()}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function norm(s){return (s||'').trim().toLowerCase()}
+function zoneLabel(z){return z==='fridge'?'מקרר':z==='freezer'?'מקפיא':'מזווה'}
+function today(){return new Date().toISOString().slice(0,10)}
+function addItem(){let n=name.value.trim(),q=+qty.value;if(!n||!q)return alert('יש להזין מוצר וכמות');upsert(n,zone.value,q,unit.value,+min.value||0,purchase.value||today(),expiry.value||'');name.value=qty.value=min.value=expiry.value='';save()}
+function upsert(n,z,q,u,m=0,p=today(),e=''){let x=db.items.find(i=>norm(i.name)===norm(n)&&i.unit===u);if(x){x.qty=+(x.qty+q).toFixed(2);x.zone=z;x.purchase=p;x.expiry=e||x.expiry;x.min=m||x.min}else db.items.push({id:crypto.randomUUID(),name:n,zone:z,qty:q,unit:u,min:m,purchase:p,expiry:e})}
+function change(id,d){let x=db.items.find(i=>i.id===id);x.qty=Math.max(0,+(x.qty+d).toFixed(2));save()}
+function removeItem(id){db.items=db.items.filter(i=>i.id!==id);save()}
+function daysLeft(d){if(!d)return null;return Math.ceil((new Date(d+'T12:00:00')-new Date())/86400000)}
+function statusBadge(i){let d=daysLeft(i.expiry);if(d===null)return '<span class="pill">אין תאריך</span>';if(d<0)return '<span class="pill urgent">עבר תוקף</span>';if(d<=2)return '<span class="pill urgent">דחוף</span>';if(d<=5)return '<span class="pill soon">להשתמש בקרוב</span>';return '<span class="pill fresh">טרי</span>'}
+function renderStock(){stockBody.innerHTML='';db.items.forEach(i=>stockBody.insertAdjacentHTML('beforeend',`<tr><td>${i.name}</td><td>${zoneLabel(i.zone)}</td><td><button class="alt" onclick="change('${i.id}',-1)">−</button> ${i.qty} ${i.unit} <button class="alt" onclick="change('${i.id}',1)">+</button></td><td>${statusBadge(i)}</td><td><button class="red" onclick="removeItem('${i.id}')">×</button></td></tr>`))}
+function findStock(n,u){return db.items.find(i=>norm(i.name)===norm(n)&&i.unit===u)}
+function missing(r){return r.ing.filter(a=>{let x=findStock(a[0],a[2]);return !x||x.qty<a[1]})}
+function useRecipe(idx){let r=recipes[idx];if(missing(r).length)return alert('אין מספיק מלאי למתכון הזה');r.ing.forEach(a=>{let x=findStock(a[0],a[2]);x.qty=Math.max(0,+(x.qty-a[1]).toFixed(2));addShop(a[0],a[1],a[2],'נצרך במתכון')});save();alert('המלאי עודכן')}
+function recipeCard(r,idx){let m=missing(r);return `<div class="recipe"><div class="big">${r.name}</div><div class="meta"><span class="pill">${r.k==='pareve'?'פרווה':r.k==='dairy'?'חלבי':'בשרי'}</span><span class="pill">${r.time} דק׳</span>${m.length?`<span class="pill soon">חסר ${m.length}</span>`:'<span class="pill fresh">אפשר להכין</span>'}</div><div class="small muted">${r.ing.map(a=>a[0]+' '+a[1]+' '+a[2]).join(' • ')}</div>${m.length?'':`<button style="margin-top:8px" onclick="useRecipe(${idx})">הכנתי את המתכון</button>`}</div>`}
+function renderRecipes(){let k=kosherFilter.value,f=recipeFilter.value;recipeList.innerHTML='';recipes.forEach((r,i)=>{let m=missing(r);if(k!=='all'&&r.k!==k)return;if(f==='possible'&&m.length)return;if(f==='one'&&m.length!==1)return;recipeList.insertAdjacentHTML('beforeend',recipeCard(r,i))});if(!recipeList.innerHTML)recipeList.innerHTML='<div class="empty">אין כרגע מתכונים מתאימים</div>'}
+function addShop(n,q=1,u='יחידה',why='ידני'){let x=db.shopping.find(s=>norm(s.name)===norm(n)&&s.unit===u&&!s.done);if(x)x.qty=+(x.qty+q).toFixed(2);else db.shopping.push({id:crypto.randomUUID(),name:n,qty:q,unit:u,why,done:false})}
+function addManualShop(){if(!manualShop.value.trim())return;addShop(manualShop.value.trim());manualShop.value='';save()}
+function doneShop(id){let x=db.shopping.find(s=>s.id===id);x.done=true;save()}
+function renderShopping(){db.items.filter(i=>i.qty<=i.min).forEach(i=>{if(!db.shopping.some(s=>norm(s.name)===norm(i.name)&&!s.done))addShop(i.name,Math.max(i.min-i.qty,1),i.unit,'מלאי נמוך')});shoppingList.innerHTML='';db.shopping.filter(s=>!s.done).forEach(s=>shoppingList.insertAdjacentHTML('beforeend',`<li><label><input type="checkbox" onchange="doneShop('${s.id}')"> <b>${s.name}</b> — ${s.qty} ${s.unit} <span class="small muted">(${s.why})</span></label></li>`));if(!shoppingList.innerHTML)shoppingList.innerHTML='<li class="muted">אין כרגע מה לקנות</li>'}
+async function scanReceipt(){let f=receiptImage.files[0];if(!f)return alert('יש לבחור תמונה');ocrStatus.textContent='קורא את הקבלה…';try{let r=await Tesseract.recognize(f,'heb+eng',{logger:m=>{if(m.progress)ocrStatus.textContent=(m.status||'OCR')+' '+Math.round(m.progress*100)+'%'}});ocrText.value=r.data.text;ocrStatus.textContent='הקריאה הסתיימה'}catch(e){ocrStatus.textContent='לא הצלחתי לקרוא. אפשר להדביק טקסט ידנית.'}}
+function parseReceipt(){let out=[];ocrText.value.split('\n').map(x=>x.trim()).filter(Boolean).forEach(line=>{for(const [k,v] of Object.entries(db.maps)){if(line.includes(k)){let [n,z]=v.split('|');out.push({line,n,z});break}}});receiptResults.innerHTML='';out.forEach((c,i)=>receiptResults.insertAdjacentHTML('beforeend',`<div class="recipe"><div class="small muted">${c.line}</div><div class="row"><input id="rn${i}" value="${c.n}"><select id="rz${i}"><option value="fridge" ${c.z==='fridge'?'selected':''}>מקרר</option><option value="freezer" ${c.z==='freezer'?'selected':''}>מקפיא</option><option value="pantry" ${c.z==='pantry'?'selected':''}>מזווה</option></select><input id="rq${i}" type="number" value="1" step="0.1"><select id="ru${i}"><option>יחידה</option><option>קופסה</option><option>חבילה</option><option>ק״ג</option><option>ליטר</option></select><input id="rp${i}" type="date" value="${today()}"></div><button onclick="addReceipt(${i},'${encodeURIComponent(c.line)}')">הוספה למלאי</button></div>`));if(!out.length)receiptResults.innerHTML='<div class="empty">לא זוהו מוצרים. אפשר להוסיף קיצור במילון.</div>'}
+function addReceipt(i,line){let n=document.getElementById('rn'+i).value,z=document.getElementById('rz'+i).value,q=+document.getElementById('rq'+i).value,u=document.getElementById('ru'+i).value,p=document.getElementById('rp'+i).value;upsert(n,z,q,u,0,p,'');let h=decodeURIComponent(line).match(/[\u0590-\u05FF][\u0590-\u05FF\s-]*/);if(h)db.maps[h[0].trim()]=n+'|'+z;save();alert('נוסף למלאי')}
+function saveMap(){if(!mapKey.value.trim()||!mapVal.value.trim())return;db.maps[mapKey.value.trim()]=mapVal.value.trim()+'|'+mapZone.value;mapKey.value=mapVal.value='';save()}
+function renderMaps(){mapList.innerHTML=Object.entries(db.maps).slice(-50).reverse().map(([k,v])=>`<div>${k} → ${v.split('|')[0]} <span class="pill">${zoneLabel(v.split('|')[1])}</span></div>`).join('')}
+function exportData(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.download='hamizve-backup.json';a.click()}
+function renderHome(){let c={fridge:0,freezer:0,pantry:0};db.items.forEach(i=>c[i.zone]++);summary.innerHTML=`<p>🧊 מקרר: <b>${c.fridge}</b> מוצרים</p><p>❄️ מקפיא: <b>${c.freezer}</b></p><p>🥫 מזווה: <b>${c.pantry}</b></p>`;let e=db.items.filter(i=>{let d=daysLeft(i.expiry);return d!==null&&d<=5}).sort((a,b)=>daysLeft(a.expiry)-daysLeft(b.expiry));expiring.innerHTML=e.length?e.map(i=>`<div>${statusBadge(i)} ${i.name}</div>`).join(''):'<div class="muted">אין כרגע מוצרים דחופים</div>';let poss=recipes.map((r,i)=>[r,i]).filter(x=>missing(x[0]).length===0).slice(0,4);homeRecipes.innerHTML=poss.length?poss.map(x=>recipeCard(x[0],x[1])).join(''):'<div class="empty">הכניסו מלאי כדי לראות מתכונים שאפשר להכין</div>'}
+function render(){renderStock();renderRecipes();renderShopping();renderMaps();renderHome()}
+render();
+</script>
+</body></html>
